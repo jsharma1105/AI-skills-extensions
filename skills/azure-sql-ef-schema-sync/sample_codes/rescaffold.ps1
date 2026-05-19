@@ -5,7 +5,7 @@
 
 param(
     [string]$Project       = ".",                    # Path to the .csproj with DbContext
-    [string]$StartupProject = "../MyApp.Api",         # Path to the startup project
+    [string]$StartupProject = "../YourApp.Api",       # Path to the startup project
     [string]$OutputDir     = "Models",
     [string]$ContextDir    = "Data",
     [string]$ContextName   = "AppDbContext",

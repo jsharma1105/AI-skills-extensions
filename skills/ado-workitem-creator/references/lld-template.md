@@ -35,8 +35,8 @@ Example component flow:
 
 | Story Type | Description |
 |------------|-------------|
-| MyProject Future Position: Azure Function (Build) | Scaffold new Azure Function project |
-| MyProject Future Position: Azure Function BUILD | Build/implement function logic |
+| Azure Function (Build) | Scaffold new Azure Function project |
+| Azure Function BUILD | Build/implement function logic |
 | BUILD API endpoints | Implement API controller and routes |
 | APIM baseroute | Configure API Management base route |
 

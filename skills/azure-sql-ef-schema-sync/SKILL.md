@@ -11,19 +11,64 @@ When a column, table, or view changes in the Azure SQL database, follow this wor
 
 ---
 
-## Step 0 — Verify AppModelsDB Is Cloned
+## First-Run Configuration
 
-The EF Core models live in the **AppModelsDB** repository.
+On the **first invocation** (or when `~/.copilot/skills/azure-sql-ef-schema-sync/config.json` is missing), collect all configuration from the user using `ask_user`:
 
-**GitHub URL:** `https://github.com/my-github-org/AppModelsDB`
+```
+ask_user:
+  message: "I need to configure the Azure SQL EF Core Schema Sync skill for your environment."
+  fields:
+    - github_org: (string) GitHub organization for the models repo (e.g., my-org)
+    - models_repo_name: (string) Repository name for EF Core models (e.g., AppModelsDB)
+    - scaffold_script_path: (string) Relative path to ScaffoldDb.ps1 inside the models repo (e.g., PKG_App.Models/App.Models/DevelopmentHelpers/ScaffoldDb.ps1)
+    - sql_server: (string) Azure SQL server name (e.g., myapp-test.database.windows.net)
+    - sql_database: (string) Azure SQL database name (e.g., myapp-testdb)
+    - ado_org_url: (string) ADO organization URL (e.g., https://dev.azure.com/myorg)
+    - ado_project: (string) ADO project name (e.g., MyProject)
+    - nuget_feed_name: (string) NuGet feed name in ADO artifacts (e.g., InternalFeed)
+    - nuget_package_name: (string) Full NuGet package name (e.g., MyCompany.App.Models)
+    - pipeline_definition_id: (string) ADO pipeline definition ID for publishing the package (e.g., 15098)
+    - workspace_root: (string) Root path where all repos are cloned (e.g., C:\Projects)
+```
+
+Save to `~/.copilot/skills/azure-sql-ef-schema-sync/config.json`:
+
+```json
+{
+  "github_org": "my-org",
+  "models_repo_name": "AppModelsDB",
+  "scaffold_script_path": "PKG_App.Models/App.Models/DevelopmentHelpers/ScaffoldDb.ps1",
+  "sql_server": "myapp-test.database.windows.net",
+  "sql_database": "myapp-testdb",
+  "ado_org_url": "https://dev.azure.com/myorg",
+  "ado_project": "MyProject",
+  "nuget_feed_name": "InternalFeed",
+  "nuget_package_name": "MyCompany.App.Models",
+  "pipeline_definition_id": "15098",
+  "workspace_root": "C:\\Projects"
+}
+```
+
+On subsequent invocations, read from `config.json`. If user says "reconfigure", re-prompt.
+
+**Use `{{config.*}}` placeholders below — substitute from config at runtime.**
+
+---
+
+## Step 0 — Verify Models Repo Is Cloned
+
+The EF Core models live in the **{{config.models_repo_name}}** repository.
+
+**GitHub URL:** `https://github.com/{{config.github_org}}/{{config.models_repo_name}}`
 
 ```powershell
 # Check if already cloned somewhere on the machine
-Get-ChildItem -Path "C:\" -Recurse -Filter "ScaffoldDb.ps1" -Depth 6 -ErrorAction SilentlyContinue
+Get-ChildItem -Path "{{config.workspace_root}}" -Recurse -Filter "ScaffoldDb.ps1" -Depth 6 -ErrorAction SilentlyContinue
 ```
 
 If **not found**, stop and ask the user:
-> "The AppModelsDB repo does not appear to be cloned on this machine. Please clone it with `git clone https://github.com/my-github-org/AppModelsDB.git` and re-run."
+> "The {{config.models_repo_name}} repo does not appear to be cloned on this machine. Please clone it with `git clone https://github.com/{{config.github_org}}/{{config.models_repo_name}}.git` and re-run."
 
 **Do not proceed until the repo is confirmed cloned.**
 
@@ -31,22 +76,22 @@ If **not found**, stop and ask the user:
 
 ## Step 1 — Run ScaffoldDb.ps1
 
-Navigate to the root of the cloned `AppModelsDB` repo, then run:
+Navigate to the root of the cloned `{{config.models_repo_name}}` repo, then run:
 
 ```powershell
-.\PKG_MyApp.AppEmployeeDB.Models\MyApp.AppEmployeeDB.Models\DevelopmentHelpers\ScaffoldDb.ps1
+.\{{config.scaffold_script_path}}
 ```
 
 ### What the script does automatically
 - Checks `dotnet ef` is installed (installs it globally if missing)
 - Builds the project
-- Connects to `myapp-test-sqlsvr.database.windows.net` using **Active Directory Default** auth (your `az login` / VS credentials — no password)
-- Re-scaffolds schemas: `dbo`, `trng`, `stg`, `tp_feeds`, `portalauthorization`, and `diag.diagnostics`
+- Connects to `{{config.sql_server}}` using **Active Directory Default** auth (your `az login` / VS credentials — no password)
+- Re-scaffolds schemas (as configured in the script)
 - Overwrites `Models/*.cs` and `AppDbContext.cs` with the latest schema
 
 ### Prerequisites
 - Logged in to Azure AD: `az login`
-- Your account has `db_datareader` on `myapp-test-sqldb`
+- Your account has `db_datareader` on `{{config.sql_database}}`
 - On VPN / corporate network
 
 ### If the script fails
@@ -108,27 +153,27 @@ git push origin <working-branch>
 
 ## Step 4 — Run the ADO Pipeline & Determine New Version
 
-### 4a — Find the Latest Published Version in InternalFeed
+### 4a — Find the Latest Published Version in the NuGet Feed
 
-Query the InternalFeed feed for the latest `MyCompany.MyApp.AppEmployeeDB.Models` version:
+Query the {{config.nuget_feed_name}} feed for the latest `{{config.nuget_package_name}}` version:
 
 ```powershell
 # Requires az devops CLI configured with your org
 az artifacts universal list `
-  --organization "https://myorg.visualstudio.com" `
-  --project "MyProject" `
-  --feed "InternalFeed" `
-  --package-name "MyCompany.MyApp.AppEmployeeDB.Models" 2>&1 | Select-Object -First 20
+  --organization "{{config.ado_org_url}}" `
+  --project "{{config.ado_project}}" `
+  --feed "{{config.nuget_feed_name}}" `
+  --package-name "{{config.nuget_package_name}}" 2>&1 | Select-Object -First 20
 ```
 
 Or using dotnet:
 ```powershell
-dotnet package search "MyCompany.MyApp.AppEmployeeDB.Models" `
-  --source "https://pkgs.dev.azure.com/myorg/MyProject/_packaging/InternalFeed/nuget/v3/index.json" `
+dotnet package search "{{config.nuget_package_name}}" `
+  --source "{{config.ado_org_url}}/{{config.ado_project}}/_packaging/{{config.nuget_feed_name}}/nuget/v3/index.json" `
   --prerelease | Select-Object -First 10
 ```
 
-Or browse directly: [InternalFeed feed](https://myorg.visualstudio.com/MyProject/_artifacts/feed/InternalFeed)
+Or browse directly: [{{config.nuget_feed_name}} feed]({{config.ado_org_url}}/{{config.ado_project}}/_artifacts/feed/{{config.nuget_feed_name}})
 
 > If the CLI commands fail, ask the user to open the feed link above and share the latest version number.
 
@@ -156,20 +201,20 @@ Try automatically via the `az pipelines` CLI:
 
 ```powershell
 # Configure your ADO org/project once
-az devops configure --defaults organization="https://myorg.visualstudio.com" project="MyProject"
+az devops configure --defaults organization="{{config.ado_org_url}}" project="{{config.ado_project}}"
 
-# Get the current branch of AppModelsDB
-$branch = git -C "<path-to-AppModelsDB>" branch --show-current
+# Get the current branch of the models repo
+$branch = git -C "<path-to-models-repo>" branch --show-current
 
-# Run pipeline definition 15098 on that branch
+# Run pipeline definition {{config.pipeline_definition_id}} on that branch
 az pipelines run `
-  --id 15098 `
+  --id {{config.pipeline_definition_id}} `
   --branch $branch `
-  --org "https://myorg.visualstudio.com" `
-  --project "MyProject"
+  --org "{{config.ado_org_url}}" `
+  --project "{{config.ado_project}}"
 ```
 
-Pipeline URL: https://myorg.visualstudio.com/MyProject/_build?definitionId=12345
+Pipeline URL: {{config.ado_org_url}}/{{config.ado_project}}/_build?definitionId={{config.pipeline_definition_id}}
 
 > If `az pipelines` is not available or the command fails, ask the user to open the pipeline URL above, click **Run pipeline**, select the working branch, and share the new package version when it completes.
 
@@ -178,8 +223,8 @@ Pipeline URL: https://myorg.visualstudio.com/MyProject/_build?definitionId=12345
 After the pipeline succeeds, get the exact prerelease version published:
 
 ```powershell
-dotnet package search "MyCompany.MyApp.AppEmployeeDB.Models" `
-  --source "https://pkgs.dev.azure.com/myorg/MyProject/_packaging/InternalFeed/nuget/v3/index.json" `
+dotnet package search "{{config.nuget_package_name}}" `
+  --source "{{config.ado_org_url}}/{{config.ado_project}}/_packaging/{{config.nuget_feed_name}}/nuget/v3/index.json" `
   --prerelease | Select-String "0.24.6"
 ```
 
@@ -196,9 +241,9 @@ Note the full version string (e.g., `0.24.6-alpha.20260415181200`) — you'll us
 $changedEntity = "<entity-name>"
 
 # Scan all local repos for references
-Get-ChildItem -Recurse -Filter "*.cs" -Path "C:\JCTE" |
+Get-ChildItem -Recurse -Filter "*.cs" -Path "{{config.workspace_root}}" |
     Select-String $changedEntity -SimpleMatch |
-    Where-Object { $_.Path -notmatch "AppModelsDB" } |
+    Where-Object { $_.Path -notmatch "{{config.models_repo_name}}" } |
     Select-Object Path -Unique
 ```
 
@@ -265,20 +310,20 @@ For each conflicted file:
 
 ```xml
 <!-- Before -->
-<PackageReference Include="MyCompany.MyApp.AppEmployeeDB.Models" Version="0.32.0" />
+<PackageReference Include="{{config.nuget_package_name}}" Version="0.32.0" />
 
 <!-- After — use the exact prerelease version from Step 4d -->
-<PackageReference Include="MyCompany.MyApp.AppEmployeeDB.Models" Version="0.24.6-alpha.20260415181200" />
+<PackageReference Include="{{config.nuget_package_name}}" Version="0.24.6-alpha.20260415181200" />
 ```
 
 > ⚠️ **Include the full prerelease suffix** (e.g., `-alpha.20260415181200`). The feature branch pipeline publishes prerelease packages. Omitting the suffix will fail to resolve the package.
 
-Ensure `nuget.config` in the repo includes the **InternalFeed** feed and has `includePrerelease` support:
+Ensure `nuget.config` in the repo includes the **{{config.nuget_feed_name}}** feed and has `includePrerelease` support:
 
 ```xml
 <configuration>
   <packageSources>
-    <add key="InternalFeed" value="https://pkgs.dev.azure.com/myorg/MyProject/_packaging/InternalFeed/nuget/v3/index.json" />
+    <add key="{{config.nuget_feed_name}}" value="{{config.ado_org_url}}/{{config.ado_project}}/_packaging/{{config.nuget_feed_name}}/nuget/v3/index.json" />
   </packageSources>
 </configuration>
 ```
@@ -304,7 +349,7 @@ Common errors and fixes:
 | `CS0117: does not contain definition for 'OldColumn'` | Removed column still referenced | Remove all usages |
 | Object initializer missing required property | Non-nullable column added | Add `NewColumn = <default>` to all `new Entity { }` blocks |
 | `CS1061: 'Entity' does not contain 'NavProp'` | Relation dropped | Remove `.Include(x => x.NavProp)` |
-| `NU1102: Unable to find package` | Package not yet published / feed not configured | Verify pipeline succeeded and nuget.config has InternalFeed |
+| `NU1102: Unable to find package` | Package not yet published / feed not configured | Verify pipeline succeeded and nuget.config has {{config.nuget_feed_name}} |
 
 > If you hit an error not listed here, **ask the user** before making changes to fix it.
 
@@ -351,7 +396,7 @@ Get-ChildItem -Recurse -Filter "*.cs" |
 
 ```bash
 git add .
-git commit -m "chore: update MyCompany.MyApp.AppEmployeeDB.Models to <new-version> for <entity> schema change"
+git commit -m "chore: update {{config.nuget_package_name}} to <new-version> for <entity> schema change"
 git push origin feature/update-ef-models-<entity>-<date>
 ```
 
@@ -384,6 +429,6 @@ dotnet test --no-build
 | ScaffoldDb.ps1 errors | `references/scaffold-troubleshooting.md` |
 | Test update patterns | `references/testing-patterns.md` |
 | EF Core scaffold flags | `microsoft_docs_fetch(url="https://learn.microsoft.com/ef/core/cli/dotnet#dotnet-ef-dbcontext-scaffold")` |
-| Azure Artifacts NuGet feed | [InternalFeed feed](https://myorg.visualstudio.com/MyProject/_artifacts/feed/InternalFeed) |
+| Azure Artifacts NuGet feed | [{{config.nuget_feed_name}} feed]({{config.ado_org_url}}/{{config.ado_project}}/_artifacts/feed/{{config.nuget_feed_name}}) |
 | az pipelines run | `microsoft_docs_search(query="az pipelines run azure devops CLI branch")` |
-| ADO pipeline | [Definition 15098](https://myorg.visualstudio.com/MyProject/_build?definitionId=12345) |
+| ADO pipeline | [Definition {{config.pipeline_definition_id}}]({{config.ado_org_url}}/{{config.ado_project}}/_build?definitionId={{config.pipeline_definition_id}}) |

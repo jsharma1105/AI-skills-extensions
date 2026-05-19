@@ -1,13 +1,15 @@
 # ScaffoldDb.ps1 — Troubleshooting & Reference
 
+> **Note:** All paths, server names, and database names below use `{{config.*}}` placeholders. These are populated from your `~/.copilot/skills/azure-sql-ef-schema-sync/config.json` collected on first run.
+
 The scaffold script lives at:
 ```
-AppModelsDB\PKG_MyApp.AppEmployeeDB.Models\MyApp.AppEmployeeDB.Models\DevelopmentHelpers\ScaffoldDb.ps1
+{{config.models_repo_name}}\{{config.scaffold_script_path}}
 ```
 
 Run from the **repo root**:
 ```powershell
-.\PKG_MyApp.AppEmployeeDB.Models\MyApp.AppEmployeeDB.Models\DevelopmentHelpers\ScaffoldDb.ps1
+.\{{config.scaffold_script_path}}
 ```
 
 ## Parameters
@@ -18,15 +20,14 @@ Run from the **repo root**:
 
 ## What It Scaffolds
 
-- **Schemas:** `dbo`, `trng`, `stg`, `tp_feeds`, `portalauthorization`
-- **Extra table:** `diag.diagnostics`
+- **Schemas:** as configured in the script (e.g., `dbo`, `trng`, `stg`, etc.)
 - **Output:** `Models/*.cs` + `AppDbContext.cs`
 - **Flags used:** `--use-database-names`, `--no-pluralize`, `--no-onconfiguring`, `--force`
 
 ## Database Connection
 
-- **Server:** `myapp-test-sqlsvr.database.windows.net`
-- **Database:** `myapp-test-sqldb`
+- **Server:** `{{config.sql_server}}`
+- **Database:** `{{config.sql_database}}`
 - **Auth:** `Active Directory Default` (uses your Azure AD / `az login` credentials — no password)
 
 ---
@@ -44,7 +45,7 @@ Microsoft.Data.SqlClient.SqlException: Login failed for user '<token-identified 
 az login
 # or in Visual Studio: Tools → Options → Azure Service Authentication → sign in
 ```
-Ensure your Azure AD account has `db_datareader` on `myapp-test-sqldb`.
+Ensure your Azure AD account has `db_datareader` on `{{config.sql_database}}`.
 
 ---
 
@@ -70,7 +71,6 @@ Build FAILED. Cannot proceed with scaffolding.
 
 **Fix:** Fix any existing compile errors in the project first:
 ```bash
-cd PKG_MyApp.AppEmployeeDB.Models\MyApp.AppEmployeeDB.Models
 dotnet build
 ```
 
@@ -88,7 +88,7 @@ A network-related or instance-specific error occurred
 
 ### ❌ Script runs but no files changed
 
-The DB schema may not have been deployed yet to the **test** database. Verify with the DB team that the migration was applied to `myapp-test-sqldb`.
+The DB schema may not have been deployed yet to the **test** database. Verify with the DB team that the migration was applied to `{{config.sql_database}}`.
 
 ---
 
@@ -98,10 +98,8 @@ If the script fails, run the scaffold command directly:
 
 ```powershell
 dotnet ef dbcontext scaffold `
-    "Server=myapp-test-sqlsvr.database.windows.net,1433;Initial Catalog=myapp-test-sqldb;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=Active Directory Default;" `
+    "Server={{config.sql_server}},1433;Initial Catalog={{config.sql_database}};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=Active Directory Default;" `
     Microsoft.EntityFrameworkCore.SqlServer `
-    --project "PKG_MyApp.AppEmployeeDB.Models\MyApp.AppEmployeeDB.Models\MyApp.AppEmployeeDB.Models.csproj" `
-    --startup-project "PKG_MyApp.AppEmployeeDB.Models\MyApp.AppEmployeeDB.Models\MyApp.AppEmployeeDB.Models.csproj" `
     --output-dir Models `
     --context AppDbContext `
     --context-dir . `
@@ -110,13 +108,10 @@ dotnet ef dbcontext scaffold `
     --no-onconfiguring `
     --force `
     --schema "dbo" `
-    --schema "trng" `
-    --schema "stg" `
-    --schema "tp_feeds" `
-    --schema "portalauthorization" `
-    --table "diag.diagnostics" `
     --no-build
 ```
+
+> **Note:** Add `--schema` and `--table` flags as needed for your project's schemas.
 
 ---
 
@@ -168,8 +163,8 @@ dotnet ef dbcontext scaffold \
   --output-dir Models \
   --context-dir Data \
   --context AppDbContext \
-  --namespace MyApp.Data.Models \
-  --context-namespace MyApp.Data \
+  --namespace YourApp.Data.Models \
+  --context-namespace YourApp.Data \
   --no-onconfiguring \
   --force
 ```

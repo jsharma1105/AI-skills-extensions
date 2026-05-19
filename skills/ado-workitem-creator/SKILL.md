@@ -1,22 +1,53 @@
 ---
 name: ado-workitem-creator
-description: Create ADO User Stories for the MyProject\MyTeam_Area team at https://myorg.visualstudio.com. Use this skill when the user wants to create a User Story (not a Bug or Task) in the MyProject project, MyTeam_Area area, assigned to MyProject Backlog. Invoke when user says "create a user story", "create a work item for the MyProject team", "add to MyProject backlog", "log this as an ADO story", "create ADO work item for FTMS/interface/integration work", or provides an LLD or feature description and wants it turned into an ADO User Story. Do NOT invoke for Bugs, Tasks, other projects, or other area paths unless the user confirms those defaults are acceptable.
+description: Create ADO User Stories from feature descriptions or LLDs. On first use, prompts for your ADO organization, project, area path, and assignee email. Invoke when user says "create a user story", "create a work item", "add to backlog", "log this as an ADO story", or provides an LLD/feature description and wants it turned into an ADO User Story. Do NOT invoke for Bugs, Tasks, other projects, or other area paths unless the user confirms those defaults are acceptable.
 ---
 
 # ADO Work Item Creator
 
-Creates User Stories in Azure DevOps (`https://myorg.visualstudio.com`, project `MyProject`) for the `MyTeam_Area` team. Formats descriptions using the LLD template, estimates story points, and sets all required fields.
+Creates User Stories in Azure DevOps. Formats descriptions using the LLD template, estimates story points, and sets all required fields.
 
-## Defaults
+## First-Run Configuration
 
-| Field | Value |
-|-------|-------|
+On the **first invocation** of this skill (or when config is missing), you MUST collect the following from the user using `ask_user` before proceeding:
+
+```
+ask_user:
+  message: "I need to configure the ADO Work Item Creator for your environment. Please provide your Azure DevOps details."
+  fields:
+    - ado_org_url: (string) Your ADO organization URL (e.g., https://dev.azure.com/myorg or https://myorg.visualstudio.com)
+    - ado_project: (string) Project name (e.g., MyProject)
+    - area_path: (string) Area path for work items (e.g., MyProject\MyTeam)
+    - iteration_path: (string) Iteration path (e.g., MyProject or MyProject\Sprint 1)
+    - default_assignee: (string) Default assignee email (e.g., user@company.com)
+```
+
+After collecting, save to `~/.copilot/skills/ado-workitem-creator/config.json`:
+
+```json
+{
+  "ado_org_url": "https://myorg.visualstudio.com",
+  "ado_project": "MyProject",
+  "area_path": "MyProject\\MyTeam",
+  "iteration_path": "MyProject",
+  "default_assignee": "user@company.com"
+}
+```
+
+On subsequent invocations, read from `config.json`. If the user says "reconfigure" or "update config", re-prompt.
+
+**Use `{{config.ado_org_url}}`, `{{config.ado_project}}`, `{{config.area_path}}`, `{{config.iteration_path}}`, `{{config.default_assignee}}` as placeholders throughout this skill.**
+
+## Defaults (from config)
+
+| Field | Source |
+|-------|--------|
 | Work Item Type | User Story |
-| Organization | `https://myorg.visualstudio.com` |
-| Project | `MyProject` |
-| Area Path | `MyProject\MyTeam_Area` |
-| Iteration | `MyProject` (root = product backlog) |
-| Assigned To | `user@mycompany.com` (current user — see assignee precedence rules in Step 1) |
+| Organization | `{{config.ado_org_url}}` |
+| Project | `{{config.ado_project}}` |
+| Area Path | `{{config.area_path}}` |
+| Iteration | `{{config.iteration_path}}` |
+| Assigned To | `{{config.default_assignee}}` |
 
 ## Creation Workflow
 
@@ -25,7 +56,7 @@ Creates User Stories in Azure DevOps (`https://myorg.visualstudio.com`, project 
 Read the user's description or LLD text. Extract:
 
 - **Title** — a concise action phrase (e.g., "Implement Service Bus trigger for position updates"). If the user didn't provide one, derive it from the core purpose of the work.
-- **Assignee** — use strict precedence: (1) explicit "assign to X" instruction, (2) "assign to me/myself" → `user@mycompany.com`, (3) no instruction → default `user@mycompany.com`. **Do not infer** assignee from names appearing in the LLD body (reviewers, PO names, stakeholders, Q&A participants). If ambiguous, ask.
+- **Assignee** — use strict precedence: (1) explicit "assign to X" instruction, (2) "assign to me/myself" → `{{config.default_assignee}}`, (3) no instruction → default `{{config.default_assignee}}`. **Do not infer** assignee from names appearing in the LLD body (reviewers, PO names, stakeholders, Q&A participants). If ambiguous, ask.
 - **In-Scope work** — what is explicitly being built.
 - **Out-of-Scope** — anything explicitly excluded, or leave blank.
 - **Source/Target systems** — identify data sources (Qualtero, Service Bus, SQL, HTTP) and targets (JCTE, queues, tables).
@@ -35,7 +66,7 @@ Read the user's description or LLD text. Extract:
 
 Analyze complexity signals in the description and assign a Fibonacci number: **1, 2, 3, 5, 8, 13, 21**.
 
-Use this rubric — calibrated for Azure Function / integration work on the MyProject platform:
+Use this rubric — calibrated for Azure Function / integration work:
 
 | Points | What it signals |
 |--------|----------------|
@@ -108,8 +139,8 @@ Before creating anything in ADO, present a clear summary:
 ─────────────────────────────────────────
 Title:         [title]
 Type:          User Story
-Area Path:     MyProject\MyTeam_Area
-Iteration:     MyProject\MyProject Backlog
+Area Path:     {{config.area_path}}
+Iteration:     {{config.iteration_path}}
 Assigned To:   [email]
 Story Points:  [n]  ([one-line reasoning])
 
@@ -138,18 +169,18 @@ az boards work-item create `
   --type "User Story" `
   --description "[HTML_DESCRIPTION]" `
   --assigned-to "[ASSIGNEE_EMAIL]" `
-  --area "MyProject\MyTeam_Area" `
-  --iteration "MyProject" `
+  --area "{{config.area_path}}" `
+  --iteration "{{config.iteration_path}}" `
   --fields "Microsoft.VSTS.Scheduling.StoryPoints=[N]" "Microsoft.VSTS.Common.AcceptanceCriteria=[HTML_AC]" `
-  --org "https://myorg.visualstudio.com" `
-  --project "MyProject"
+  --org "{{config.ado_org_url}}" `
+  --project "{{config.ado_project}}"
 ```
 
 **Important notes:**
 - Both `--description` and the `AcceptanceCriteria` field value must be valid, sanitized HTML (entities escaped, simple tags only, no newlines inside the string — use `<br>` instead).
 - The `--fields` flag takes space-separated `field=value` pairs; wrap each value in double quotes.
-- If the command fails with an auth error, tell the user to run `az login` and `az devops configure --defaults organization=https://myorg.visualstudio.com` first.
-- If area or iteration path errors occur, suggest verifying with `az boards area project list --org https://myorg.visualstudio.com --project MyProject`.
+- If the command fails with an auth error, tell the user to run `az login` and `az devops configure --defaults organization={{config.ado_org_url}}` first.
+- If area or iteration path errors occur, suggest verifying with `az boards area project list --org {{config.ado_org_url}} --project {{config.ado_project}}`.
 
 ### Step 6 — Report the Result
 
@@ -160,7 +191,7 @@ Parse the JSON output from the command and display:
 ─────────────────────────────────
 ID:    #[id]
 Title: [title]
-URL:   https://myorg.visualstudio.com/MyProject/_workitems/edit/[id]
+URL:   {{config.ado_org_url}}/{{config.ado_project}}/_workitems/edit/[id]
 Story Points: [n]
 Assigned To:  [name]
 ─────────────────────────────────

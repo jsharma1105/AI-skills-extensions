@@ -1,5 +1,6 @@
 {
   "skill_name": "ado-workitem-creator",
+  "note": "Eval assertions use placeholder values (MyProject, MyTeam_Area, user@mycompany.com). Replace with your configured values when running evals.",
   "evals": [
     {
       "id": 1,
