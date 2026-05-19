@@ -1,0 +1,111 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Build Auto-Fix — GitHub Actions Reusable Workflow
+# ──────────────────────────────────────────────────────────────────────────────
+# Call this workflow from your CI pipeline on failure to collect context
+# and optionally run the autofix-runner headlessly.
+#
+# Usage (in your workflow YAML):
+#
+#   jobs:
+#     build:
+#       runs-on: ubuntu-latest
+#       steps:
+#         - uses: actions/checkout@v4
+#         - run: npm test
+#
+#     autofix:
+#       needs: build
+#       if: failure()
+#       uses: ./.github/workflows/autofix.yml
+#       with:
+#         mode: 'notify'        # or 'headless'
+#         max_retries: 3
+# ──────────────────────────────────────────────────────────────────────────────
+
+name: Build Auto-Fix
+
+on:
+  workflow_call:
+    inputs:
+      mode:
+        description: "'notify' for human-in-the-loop, 'headless' for automated fix"
+        type: string
+        default: 'notify'
+      max_retries:
+        description: 'Maximum fix attempts (headless only)'
+        type: number
+        default: 3
+      run_id:
+        description: 'Failed workflow run ID to investigate (defaults to triggering run)'
+        type: string
+        default: ''
+
+jobs:
+  # ── Notify Mode ──────────────────────────────────────────────────────────
+  notify:
+    if: inputs.mode == 'notify'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print autofix instructions
+        run: |
+          echo "=============================================="
+          echo "  BUILD FAILED — Auto-Fix Context"
+          echo "=============================================="
+          echo ""
+          echo "To auto-fix, open Copilot CLI and say:"
+          echo ""
+          echo "  Watch GitHub build on ${{ github.repository }},"
+          echo "  branch ${{ github.ref_name }}."
+          echo "  Investigate the failure and fix it."
+          echo ""
+          echo "Or use individual tools:"
+          echo ""
+          echo "  1. build_preflight (platform: github)"
+          echo "  2. build_investigate_failure"
+          echo "     - owner: ${{ github.repository_owner }}"
+          echo "     - repo: ${{ github.event.repository.name }}"
+          echo "     - run_id: ${{ inputs.run_id || github.run_id }}"
+          echo "  3. [fix code based on failure analysis]"
+          echo "  4. build_fix_and_pr"
+          echo "     - base_branch: ${{ github.ref_name }}"
+          echo "  5. build_wait_for_pr_merge"
+          echo "  6. build_trigger_workflow"
+          echo ""
+          echo "=============================================="
+          echo "  Context Variables"
+          echo "=============================================="
+          echo "  Run ID:     ${{ inputs.run_id || github.run_id }}"
+          echo "  Repository: ${{ github.repository }}"
+          echo "  Branch:     ${{ github.ref_name }}"
+          echo "  Workflow:   ${{ github.workflow }}"
+          echo "  Run URL:    ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ inputs.run_id || github.run_id }}"
+          echo "=============================================="
+
+  # ── Headless Mode ────────────────────────────────────────────────────────
+  headless:
+    if: inputs.mode == 'headless'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run autofix-runner
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node "${AUTOFIX_RUNNER_PATH:-~/.copilot/extensions/build-autofix/autofix-runner.mjs}" \
+            --owner "${{ github.repository_owner }}" \
+            --repo "${{ github.event.repository.name }}" \
+            --run-id "${{ inputs.run_id || github.run_id }}" \
+            --branch "${{ github.ref_name }}" \
+            --workflow-id "${{ github.workflow }}" \
+            --max-retries "${{ inputs.max_retries }}"

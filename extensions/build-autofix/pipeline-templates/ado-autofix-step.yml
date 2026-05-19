@@ -1,0 +1,149 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Build Auto-Fix — ADO Pipeline Step Template
+# ──────────────────────────────────────────────────────────────────────────────
+# Include this template in your Azure DevOps pipeline to automatically
+# collect failure context and invoke the build-autofix skill on failure.
+#
+# Usage (in your pipeline YAML):
+#
+#   stages:
+#     - stage: Build
+#       jobs:
+#         - job: BuildAndTest
+#           steps:
+#             - script: dotnet build && dotnet test
+#
+#     - stage: AutoFix
+#       dependsOn: Build
+#       condition: failed()
+#       jobs:
+#         - template: pipeline-templates/ado-autofix-step.yml
+#           parameters:
+#             mode: 'headless'   # or 'notify' for human-in-the-loop
+#             maxRetries: 3
+#             serviceConnection: 'my-azure-service-connection'
+# ──────────────────────────────────────────────────────────────────────────────
+
+parameters:
+  # 'notify' = post failure context for developer to run Copilot CLI manually
+  # 'headless' = run autofix-runner.mjs on a self-hosted agent with Node.js + az CLI
+  - name: mode
+    type: string
+    default: 'notify'
+    values:
+      - notify
+      - headless
+
+  # Maximum fix attempts (headless mode only)
+  - name: maxRetries
+    type: number
+    default: 3
+
+  # Azure service connection for az CLI auth (headless mode only)
+  - name: serviceConnection
+    type: string
+    default: ''
+
+  # Pool for the autofix job (headless mode needs self-hosted with Node.js)
+  - name: pool
+    type: string
+    default: ''
+
+jobs:
+  # ── Notify Mode: Output failure context for developer ────────────────────
+  - ${{ if eq(parameters.mode, 'notify') }}:
+    - job: AutofixNotify
+      displayName: '🔧 Collect failure context for autofix'
+      steps:
+        - checkout: none
+        - script: |
+            echo "=============================================="
+            echo "  BUILD FAILED — Auto-Fix Context"
+            echo "=============================================="
+            echo ""
+            echo "To auto-fix this failure, open Copilot CLI and say:"
+            echo ""
+            echo "  Watch ADO build $(Build.BuildId) on org $(System.CollectionUri)"
+            echo "  project $(System.TeamProject), pipeline $(System.DefinitionId),"
+            echo "  branch $(Build.SourceBranchName). Investigate the failure and fix it."
+            echo ""
+            echo "Or use individual tools:"
+            echo ""
+            echo "  1. build_preflight (platform: ado)"
+            echo "  2. build_investigate_failure"
+            echo "     - org: $(System.TeamFoundationCollectionUri)"
+            echo "     - project: $(System.TeamProject)"
+            echo "     - run_id: $(Build.BuildId)"
+            echo "  3. [fix code based on failure analysis]"
+            echo "  4. build_fix_and_pr"
+            echo "     - base_branch: $(Build.SourceBranchName)"
+            echo "     - org/project/repo: as above"
+            echo "  5. build_wait_for_pr_merge"
+            echo "  6. build_trigger_workflow"
+            echo ""
+            echo "=============================================="
+            echo "  Pipeline Variables"
+            echo "=============================================="
+            echo "  Build ID:      $(Build.BuildId)"
+            echo "  Pipeline ID:   $(System.DefinitionId)"
+            echo "  Pipeline Name: $(Build.DefinitionName)"
+            echo "  Branch:        $(Build.SourceBranchName)"
+            echo "  Repo:          $(Build.Repository.Name)"
+            echo "  Project:       $(System.TeamProject)"
+            echo "  Org URL:       $(System.CollectionUri)"
+            echo "  Build URL:     $(System.CollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)"
+            echo "=============================================="
+          displayName: 'Print autofix instructions'
+
+        # Output variables so downstream steps/stages can consume them
+        - script: |
+            echo "##vso[task.setvariable variable=autofixRunId;isOutput=true]$(Build.BuildId)"
+            echo "##vso[task.setvariable variable=autofixPipelineId;isOutput=true]$(System.DefinitionId)"
+            echo "##vso[task.setvariable variable=autofixBranch;isOutput=true]$(Build.SourceBranchName)"
+            echo "##vso[task.setvariable variable=autofixRepo;isOutput=true]$(Build.Repository.Name)"
+            echo "##vso[task.setvariable variable=autofixProject;isOutput=true]$(System.TeamProject)"
+            echo "##vso[task.setvariable variable=autofixOrg;isOutput=true]$(System.CollectionUri)"
+          name: autofixContext
+          displayName: 'Set autofix output variables'
+
+  # ── Headless Mode: Run autofix-runner.mjs on self-hosted agent ───────────
+  - ${{ if eq(parameters.mode, 'headless') }}:
+    - job: AutofixHeadless
+      displayName: '🤖 Auto-fix build failure'
+      ${{ if ne(parameters.pool, '') }}:
+        pool: ${{ parameters.pool }}
+      steps:
+        - checkout: self
+          persistCredentials: true
+
+        # Authenticate az CLI via service connection
+        - ${{ if ne(parameters.serviceConnection, '') }}:
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: ${{ parameters.serviceConnection }}
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                echo "Authenticated with Azure. Running autofix..."
+                node "$(AUTOFIX_RUNNER_PATH:-~/.copilot/extensions/build-autofix/autofix-runner.mjs)" \
+                  --org "$(System.CollectionUri)" \
+                  --project "$(System.TeamProject)" \
+                  --repo "$(Build.Repository.Name)" \
+                  --run-id "$(Build.BuildId)" \
+                  --pipeline-id "$(System.DefinitionId)" \
+                  --branch "$(Build.SourceBranchName)" \
+                  --max-retries "${{ parameters.maxRetries }}"
+            displayName: 'Run autofix-runner.mjs'
+
+        # Fallback: no service connection, assume az is pre-authenticated
+        - ${{ if eq(parameters.serviceConnection, '') }}:
+          - script: |
+              node "${AUTOFIX_RUNNER_PATH:-~/.copilot/extensions/build-autofix/autofix-runner.mjs}" \
+                --org "$(System.CollectionUri)" \
+                --project "$(System.TeamProject)" \
+                --repo "$(Build.Repository.Name)" \
+                --run-id "$(Build.BuildId)" \
+                --pipeline-id "$(System.DefinitionId)" \
+                --branch "$(Build.SourceBranchName)" \
+                --max-retries "${{ parameters.maxRetries }}"
+            displayName: 'Run autofix-runner.mjs (pre-auth)'
