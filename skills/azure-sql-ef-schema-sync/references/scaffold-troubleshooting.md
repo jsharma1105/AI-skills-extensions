@@ -2,12 +2,12 @@
 
 The scaffold script lives at:
 ```
-CrewEmployeeLookupDB\PKG_CmsCrew.CrewEmployeeDB.Models\CmsCrew.CrewEmployeeDB.Models\DevelopmentHelpers\ScaffoldDb.ps1
+AppModelsDB\PKG_MyApp.AppEmployeeDB.Models\MyApp.AppEmployeeDB.Models\DevelopmentHelpers\ScaffoldDb.ps1
 ```
 
 Run from the **repo root**:
 ```powershell
-.\PKG_CmsCrew.CrewEmployeeDB.Models\CmsCrew.CrewEmployeeDB.Models\DevelopmentHelpers\ScaffoldDb.ps1
+.\PKG_MyApp.AppEmployeeDB.Models\MyApp.AppEmployeeDB.Models\DevelopmentHelpers\ScaffoldDb.ps1
 ```
 
 ## Parameters
@@ -20,13 +20,13 @@ Run from the **repo root**:
 
 - **Schemas:** `dbo`, `trng`, `stg`, `tp_feeds`, `portalauthorization`
 - **Extra table:** `diag.diagnostics`
-- **Output:** `Models/*.cs` + `CrewEmployeeLookupContext.cs`
+- **Output:** `Models/*.cs` + `AppDbContext.cs`
 - **Flags used:** `--use-database-names`, `--no-pluralize`, `--no-onconfiguring`, `--force`
 
 ## Database Connection
 
-- **Server:** `crewemployeelookup-test-sqlsvr-fg.database.windows.net`
-- **Database:** `crewemployeelookup-test-sqldb`
+- **Server:** `myapp-test-sqlsvr.database.windows.net`
+- **Database:** `myapp-test-sqldb`
 - **Auth:** `Active Directory Default` (uses your Azure AD / `az login` credentials — no password)
 
 ---
@@ -44,7 +44,7 @@ Microsoft.Data.SqlClient.SqlException: Login failed for user '<token-identified 
 az login
 # or in Visual Studio: Tools → Options → Azure Service Authentication → sign in
 ```
-Ensure your Azure AD account has `db_datareader` on `crewemployeelookup-test-sqldb`.
+Ensure your Azure AD account has `db_datareader` on `myapp-test-sqldb`.
 
 ---
 
@@ -70,7 +70,7 @@ Build FAILED. Cannot proceed with scaffolding.
 
 **Fix:** Fix any existing compile errors in the project first:
 ```bash
-cd PKG_CmsCrew.CrewEmployeeDB.Models\CmsCrew.CrewEmployeeDB.Models
+cd PKG_MyApp.AppEmployeeDB.Models\MyApp.AppEmployeeDB.Models
 dotnet build
 ```
 
@@ -88,7 +88,7 @@ A network-related or instance-specific error occurred
 
 ### ❌ Script runs but no files changed
 
-The DB schema may not have been deployed yet to the **test** database. Verify with the DB team that the migration was applied to `crewemployeelookup-test-sqldb`.
+The DB schema may not have been deployed yet to the **test** database. Verify with the DB team that the migration was applied to `myapp-test-sqldb`.
 
 ---
 
@@ -98,12 +98,12 @@ If the script fails, run the scaffold command directly:
 
 ```powershell
 dotnet ef dbcontext scaffold `
-    "Server=crewemployeelookup-test-sqlsvr-fg.database.windows.net,1433;Initial Catalog=crewemployeelookup-test-sqldb;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=Active Directory Default;" `
+    "Server=myapp-test-sqlsvr.database.windows.net,1433;Initial Catalog=myapp-test-sqldb;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=Active Directory Default;" `
     Microsoft.EntityFrameworkCore.SqlServer `
-    --project "PKG_CmsCrew.CrewEmployeeDB.Models\CmsCrew.CrewEmployeeDB.Models\CmsCrew.CrewEmployeeDB.Models.csproj" `
-    --startup-project "PKG_CmsCrew.CrewEmployeeDB.Models\CmsCrew.CrewEmployeeDB.Models\CmsCrew.CrewEmployeeDB.Models.csproj" `
+    --project "PKG_MyApp.AppEmployeeDB.Models\MyApp.AppEmployeeDB.Models\MyApp.AppEmployeeDB.Models.csproj" `
+    --startup-project "PKG_MyApp.AppEmployeeDB.Models\MyApp.AppEmployeeDB.Models\MyApp.AppEmployeeDB.Models.csproj" `
     --output-dir Models `
-    --context CrewEmployeeLookupContext `
+    --context AppDbContext `
     --context-dir . `
     --use-database-names `
     --no-pluralize `

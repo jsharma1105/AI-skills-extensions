@@ -1,6 +1,6 @@
 # LLD Template Reference
 
-This is the standard Low-Level Design (LLD) template used by the Transformers_FTMS_Interface team. Use it as the structure for ADO work item descriptions.
+This is the standard Low-Level Design (LLD) template used by the MyTeam_Area team. Use it as the structure for ADO work item descriptions.
 
 ---
 
@@ -35,8 +35,8 @@ Example component flow:
 
 | Story Type | Description |
 |------------|-------------|
-| Crew Future Position: Azure Function (Build) | Scaffold new Azure Function project |
-| Crew Future Position: Azure Function BUILD | Build/implement function logic |
+| MyProject Future Position: Azure Function (Build) | Scaffold new Azure Function project |
+| MyProject Future Position: Azure Function BUILD | Build/implement function logic |
 | BUILD API endpoints | Implement API controller and routes |
 | APIM baseroute | Configure API Management base route |
 

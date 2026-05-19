@@ -1,22 +1,22 @@
 ---
 name: ado-workitem-creator
-description: Create ADO User Stories for the Crew\Transformers_FTMS_Interface team at https://itsals.visualstudio.com. Use this skill when the user wants to create a User Story (not a Bug or Task) in the Crew project, Transformers_FTMS_Interface area, assigned to Crew Backlog. Invoke when user says "create a user story", "create a work item for the Crew team", "add to Crew backlog", "log this as an ADO story", "create ADO work item for FTMS/interface/integration work", or provides an LLD or feature description and wants it turned into an ADO User Story. Do NOT invoke for Bugs, Tasks, other projects, or other area paths unless the user confirms those defaults are acceptable.
+description: Create ADO User Stories for the MyProject\MyTeam_Area team at https://myorg.visualstudio.com. Use this skill when the user wants to create a User Story (not a Bug or Task) in the MyProject project, MyTeam_Area area, assigned to MyProject Backlog. Invoke when user says "create a user story", "create a work item for the MyProject team", "add to MyProject backlog", "log this as an ADO story", "create ADO work item for FTMS/interface/integration work", or provides an LLD or feature description and wants it turned into an ADO User Story. Do NOT invoke for Bugs, Tasks, other projects, or other area paths unless the user confirms those defaults are acceptable.
 ---
 
 # ADO Work Item Creator
 
-Creates User Stories in Azure DevOps (`https://itsals.visualstudio.com`, project `Crew`) for the `Transformers_FTMS_Interface` team. Formats descriptions using the LLD template, estimates story points, and sets all required fields.
+Creates User Stories in Azure DevOps (`https://myorg.visualstudio.com`, project `MyProject`) for the `MyTeam_Area` team. Formats descriptions using the LLD template, estimates story points, and sets all required fields.
 
 ## Defaults
 
 | Field | Value |
 |-------|-------|
 | Work Item Type | User Story |
-| Organization | `https://itsals.visualstudio.com` |
-| Project | `Crew` |
-| Area Path | `Crew\Transformers_FTMS_Interface` |
-| Iteration | `Crew` (root = product backlog) |
-| Assigned To | `Jay.Sharma@alaskaair.com` (current user — see assignee precedence rules in Step 1) |
+| Organization | `https://myorg.visualstudio.com` |
+| Project | `MyProject` |
+| Area Path | `MyProject\MyTeam_Area` |
+| Iteration | `MyProject` (root = product backlog) |
+| Assigned To | `user@mycompany.com` (current user — see assignee precedence rules in Step 1) |
 
 ## Creation Workflow
 
@@ -25,7 +25,7 @@ Creates User Stories in Azure DevOps (`https://itsals.visualstudio.com`, project
 Read the user's description or LLD text. Extract:
 
 - **Title** — a concise action phrase (e.g., "Implement Service Bus trigger for position updates"). If the user didn't provide one, derive it from the core purpose of the work.
-- **Assignee** — use strict precedence: (1) explicit "assign to X" instruction, (2) "assign to me/myself" → `Jay.Sharma@alaskaair.com`, (3) no instruction → default `Jay.Sharma@alaskaair.com`. **Do not infer** assignee from names appearing in the LLD body (reviewers, PO names, stakeholders, Q&A participants). If ambiguous, ask.
+- **Assignee** — use strict precedence: (1) explicit "assign to X" instruction, (2) "assign to me/myself" → `user@mycompany.com`, (3) no instruction → default `user@mycompany.com`. **Do not infer** assignee from names appearing in the LLD body (reviewers, PO names, stakeholders, Q&A participants). If ambiguous, ask.
 - **In-Scope work** — what is explicitly being built.
 - **Out-of-Scope** — anything explicitly excluded, or leave blank.
 - **Source/Target systems** — identify data sources (Qualtero, Service Bus, SQL, HTTP) and targets (JCTE, queues, tables).
@@ -35,7 +35,7 @@ Read the user's description or LLD text. Extract:
 
 Analyze complexity signals in the description and assign a Fibonacci number: **1, 2, 3, 5, 8, 13, 21**.
 
-Use this rubric — calibrated for Azure Function / integration work on the Crew platform:
+Use this rubric — calibrated for Azure Function / integration work on the MyProject platform:
 
 | Points | What it signals |
 |--------|----------------|
@@ -108,8 +108,8 @@ Before creating anything in ADO, present a clear summary:
 ─────────────────────────────────────────
 Title:         [title]
 Type:          User Story
-Area Path:     Crew\Transformers_FTMS_Interface
-Iteration:     Crew\Crew Backlog
+Area Path:     MyProject\MyTeam_Area
+Iteration:     MyProject\MyProject Backlog
 Assigned To:   [email]
 Story Points:  [n]  ([one-line reasoning])
 
@@ -138,18 +138,18 @@ az boards work-item create `
   --type "User Story" `
   --description "[HTML_DESCRIPTION]" `
   --assigned-to "[ASSIGNEE_EMAIL]" `
-  --area "Crew\Transformers_FTMS_Interface" `
-  --iteration "Crew" `
+  --area "MyProject\MyTeam_Area" `
+  --iteration "MyProject" `
   --fields "Microsoft.VSTS.Scheduling.StoryPoints=[N]" "Microsoft.VSTS.Common.AcceptanceCriteria=[HTML_AC]" `
-  --org "https://itsals.visualstudio.com" `
-  --project "Crew"
+  --org "https://myorg.visualstudio.com" `
+  --project "MyProject"
 ```
 
 **Important notes:**
 - Both `--description` and the `AcceptanceCriteria` field value must be valid, sanitized HTML (entities escaped, simple tags only, no newlines inside the string — use `<br>` instead).
 - The `--fields` flag takes space-separated `field=value` pairs; wrap each value in double quotes.
-- If the command fails with an auth error, tell the user to run `az login` and `az devops configure --defaults organization=https://itsals.visualstudio.com` first.
-- If area or iteration path errors occur, suggest verifying with `az boards area project list --org https://itsals.visualstudio.com --project Crew`.
+- If the command fails with an auth error, tell the user to run `az login` and `az devops configure --defaults organization=https://myorg.visualstudio.com` first.
+- If area or iteration path errors occur, suggest verifying with `az boards area project list --org https://myorg.visualstudio.com --project MyProject`.
 
 ### Step 6 — Report the Result
 
@@ -160,7 +160,7 @@ Parse the JSON output from the command and display:
 ─────────────────────────────────
 ID:    #[id]
 Title: [title]
-URL:   https://itsals.visualstudio.com/Crew/_workitems/edit/[id]
+URL:   https://myorg.visualstudio.com/MyProject/_workitems/edit/[id]
 Story Points: [n]
 Assigned To:  [name]
 ─────────────────────────────────

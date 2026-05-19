@@ -154,7 +154,7 @@ function apiUrl(orgUrl, path, queryParams = {}) {
  *   orgUrl("https://dev.azure.com/myorg")            → https://dev.azure.com/myorg
  *   orgUrl("https://myorg.visualstudio.com")         → https://myorg.visualstudio.com
  *   orgUrl("myorg.visualstudio.com")                 → https://myorg.visualstudio.com
- *   orgUrl("itsals") + az CLI configured              → https://itsals.visualstudio.com
+ *   orgUrl("myorg") + az CLI configured               → https://myorg.visualstudio.com
  */
 export function orgUrl(org) {
     // 1. Env var override — takes priority over everything

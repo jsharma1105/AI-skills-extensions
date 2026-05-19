@@ -3,7 +3,7 @@ name: azure-sql-ef-schema-sync
 description: Propagate Azure SQL schema changes (add/remove columns, updated relations/views) to all EF Core consuming projects. Use when a database table or view structure changes and you need to update entity classes, DbContext, business logic, and unit tests across a .NET solution. Covers re-scaffolding via ScaffoldDb.ps1, ADO NuGet package pipeline, impact-scoped NuGet updates with git merge, and downstream code + test fixes.
 ---
 
-# Azure SQL → EF Core Schema Sync (CrewEmployeeLookupDB Workflow)
+# Azure SQL → EF Core Schema Sync (AppModelsDB Workflow)
 
 When a column, table, or view changes in the Azure SQL database, follow this workflow exactly.
 
@@ -11,11 +11,11 @@ When a column, table, or view changes in the Azure SQL database, follow this wor
 
 ---
 
-## Step 0 — Verify CrewEmployeeLookupDB Is Cloned
+## Step 0 — Verify AppModelsDB Is Cloned
 
-The EF Core models live in the **CrewEmployeeLookupDB** repository.
+The EF Core models live in the **AppModelsDB** repository.
 
-**GitHub URL:** `https://github.com/Alaska-ITS/CrewEmployeeLookupDB`
+**GitHub URL:** `https://github.com/my-github-org/AppModelsDB`
 
 ```powershell
 # Check if already cloned somewhere on the machine
@@ -23,7 +23,7 @@ Get-ChildItem -Path "C:\" -Recurse -Filter "ScaffoldDb.ps1" -Depth 6 -ErrorActio
 ```
 
 If **not found**, stop and ask the user:
-> "The CrewEmployeeLookupDB repo does not appear to be cloned on this machine. Please clone it with `git clone https://github.com/Alaska-ITS/CrewEmployeeLookupDB.git` and re-run."
+> "The AppModelsDB repo does not appear to be cloned on this machine. Please clone it with `git clone https://github.com/my-github-org/AppModelsDB.git` and re-run."
 
 **Do not proceed until the repo is confirmed cloned.**
 
@@ -31,22 +31,22 @@ If **not found**, stop and ask the user:
 
 ## Step 1 — Run ScaffoldDb.ps1
 
-Navigate to the root of the cloned `CrewEmployeeLookupDB` repo, then run:
+Navigate to the root of the cloned `AppModelsDB` repo, then run:
 
 ```powershell
-.\PKG_CmsCrew.CrewEmployeeDB.Models\CmsCrew.CrewEmployeeDB.Models\DevelopmentHelpers\ScaffoldDb.ps1
+.\PKG_MyApp.AppEmployeeDB.Models\MyApp.AppEmployeeDB.Models\DevelopmentHelpers\ScaffoldDb.ps1
 ```
 
 ### What the script does automatically
 - Checks `dotnet ef` is installed (installs it globally if missing)
 - Builds the project
-- Connects to `crewemployeelookup-test-sqlsvr-fg.database.windows.net` using **Active Directory Default** auth (your `az login` / VS credentials — no password)
+- Connects to `myapp-test-sqlsvr.database.windows.net` using **Active Directory Default** auth (your `az login` / VS credentials — no password)
 - Re-scaffolds schemas: `dbo`, `trng`, `stg`, `tp_feeds`, `portalauthorization`, and `diag.diagnostics`
-- Overwrites `Models/*.cs` and `CrewEmployeeLookupContext.cs` with the latest schema
+- Overwrites `Models/*.cs` and `AppDbContext.cs` with the latest schema
 
 ### Prerequisites
 - Logged in to Azure AD: `az login`
-- Your account has `db_datareader` on `crewemployeelookup-test-sqldb`
+- Your account has `db_datareader` on `myapp-test-sqldb`
 - On VPN / corporate network
 
 ### If the script fails
@@ -57,8 +57,8 @@ See [references/scaffold-troubleshooting.md](references/scaffold-troubleshooting
 ## Step 2 — Review What Changed
 
 ```powershell
-git diff -- PKG_CmsCrew.CrewEmployeeDB.Models/CmsCrew.CrewEmployeeDB.Models/Models/
-git diff -- PKG_CmsCrew.CrewEmployeeDB.Models/CmsCrew.CrewEmployeeDB.Models/CrewEmployeeLookupContext.cs
+git diff -- PKG_MyApp.AppEmployeeDB.Models/MyApp.AppEmployeeDB.Models/Models/
+git diff -- PKG_MyApp.AppEmployeeDB.Models/MyApp.AppEmployeeDB.Models/AppDbContext.cs
 ```
 
 Note the exact entity name(s) and property name(s) that changed — you'll need this for the impact scan in Step 5.
@@ -69,10 +69,10 @@ If a **column was added** to a table, check whether any scaffolded view entities
 
 ```powershell
 # Diff all view entity files (EF Core scaffolds views as [Keyless] classes)
-git diff -- PKG_CmsCrew.CrewEmployeeDB.Models/CmsCrew.CrewEmployeeDB.Models/Models/V*.cs
+git diff -- PKG_MyApp.AppEmployeeDB.Models/MyApp.AppEmployeeDB.Models/Models/V*.cs
 
 # Also search for any Keyless entity that may not follow the V* naming convention
-git diff -- PKG_CmsCrew.CrewEmployeeDB.Models/CmsCrew.CrewEmployeeDB.Models/Models/ |
+git diff -- PKG_MyApp.AppEmployeeDB.Models/MyApp.AppEmployeeDB.Models/Models/ |
     Select-String "\[Keyless\]" -Context 0,5
 ```
 
@@ -98,8 +98,8 @@ git branch --show-current
 If on `main`, ask the user which feature/working branch to use before continuing.
 
 ```bash
-git add PKG_CmsCrew.CrewEmployeeDB.Models/CmsCrew.CrewEmployeeDB.Models/Models/
-git add PKG_CmsCrew.CrewEmployeeDB.Models/CmsCrew.CrewEmployeeDB.Models/CrewEmployeeLookupContext.cs
+git add PKG_MyApp.AppEmployeeDB.Models/MyApp.AppEmployeeDB.Models/Models/
+git add PKG_MyApp.AppEmployeeDB.Models/MyApp.AppEmployeeDB.Models/AppDbContext.cs
 git commit -m "chore: rescaffold EF models after schema change to <table-name>"
 git push origin <working-branch>
 ```
@@ -108,27 +108,27 @@ git push origin <working-branch>
 
 ## Step 4 — Run the ADO Pipeline & Determine New Version
 
-### 4a — Find the Latest Published Version in ASInternal
+### 4a — Find the Latest Published Version in InternalFeed
 
-Query the ASInternal feed for the latest `AlaskaAir.CmsCrew.CrewEmployeeDB.Models` version:
+Query the InternalFeed feed for the latest `MyCompany.MyApp.AppEmployeeDB.Models` version:
 
 ```powershell
 # Requires az devops CLI configured with your org
 az artifacts universal list `
-  --organization "https://itsals.visualstudio.com" `
-  --project "Crew" `
-  --feed "ASInternal" `
-  --package-name "AlaskaAir.CmsCrew.CrewEmployeeDB.Models" 2>&1 | Select-Object -First 20
+  --organization "https://myorg.visualstudio.com" `
+  --project "MyProject" `
+  --feed "InternalFeed" `
+  --package-name "MyCompany.MyApp.AppEmployeeDB.Models" 2>&1 | Select-Object -First 20
 ```
 
 Or using dotnet:
 ```powershell
-dotnet package search "AlaskaAir.CmsCrew.CrewEmployeeDB.Models" `
-  --source "https://pkgs.dev.azure.com/itsals/Crew/_packaging/ASInternal/nuget/v3/index.json" `
+dotnet package search "MyCompany.MyApp.AppEmployeeDB.Models" `
+  --source "https://pkgs.dev.azure.com/myorg/MyProject/_packaging/InternalFeed/nuget/v3/index.json" `
   --prerelease | Select-Object -First 10
 ```
 
-Or browse directly: [ASInternal feed](https://itsals.visualstudio.com/Crew/_artifacts/feed/ASInternal)
+Or browse directly: [InternalFeed feed](https://myorg.visualstudio.com/MyProject/_artifacts/feed/InternalFeed)
 
 > If the CLI commands fail, ask the user to open the feed link above and share the latest version number.
 
@@ -156,20 +156,20 @@ Try automatically via the `az pipelines` CLI:
 
 ```powershell
 # Configure your ADO org/project once
-az devops configure --defaults organization="https://itsals.visualstudio.com" project="Crew"
+az devops configure --defaults organization="https://myorg.visualstudio.com" project="MyProject"
 
-# Get the current branch of CrewEmployeeLookupDB
-$branch = git -C "<path-to-CrewEmployeeLookupDB>" branch --show-current
+# Get the current branch of AppModelsDB
+$branch = git -C "<path-to-AppModelsDB>" branch --show-current
 
 # Run pipeline definition 15098 on that branch
 az pipelines run `
   --id 15098 `
   --branch $branch `
-  --org "https://itsals.visualstudio.com" `
-  --project "Crew"
+  --org "https://myorg.visualstudio.com" `
+  --project "MyProject"
 ```
 
-Pipeline URL: https://itsals.visualstudio.com/Crew/_build?definitionId=15098
+Pipeline URL: https://myorg.visualstudio.com/MyProject/_build?definitionId=12345
 
 > If `az pipelines` is not available or the command fails, ask the user to open the pipeline URL above, click **Run pipeline**, select the working branch, and share the new package version when it completes.
 
@@ -178,8 +178,8 @@ Pipeline URL: https://itsals.visualstudio.com/Crew/_build?definitionId=15098
 After the pipeline succeeds, get the exact prerelease version published:
 
 ```powershell
-dotnet package search "AlaskaAir.CmsCrew.CrewEmployeeDB.Models" `
-  --source "https://pkgs.dev.azure.com/itsals/Crew/_packaging/ASInternal/nuget/v3/index.json" `
+dotnet package search "MyCompany.MyApp.AppEmployeeDB.Models" `
+  --source "https://pkgs.dev.azure.com/myorg/MyProject/_packaging/InternalFeed/nuget/v3/index.json" `
   --prerelease | Select-String "0.24.6"
 ```
 
@@ -198,7 +198,7 @@ $changedEntity = "<entity-name>"
 # Scan all local repos for references
 Get-ChildItem -Recurse -Filter "*.cs" -Path "C:\JCTE" |
     Select-String $changedEntity -SimpleMatch |
-    Where-Object { $_.Path -notmatch "CrewEmployeeLookupDB" } |
+    Where-Object { $_.Path -notmatch "AppModelsDB" } |
     Select-Object Path -Unique
 ```
 
@@ -206,23 +206,23 @@ From the results, identify which `.csproj` files (repos) are impacted. Cross-ref
 
 | Project (.csproj) | Repo folder |
 |-------------------|-------------|
-| `CmsCrewCarryOverRosters.csproj` | `CmsCrewProviderMgrScheduling` |
-| `QualteroMgrDBApi.csproj` | `CmsCrewProviderMgr1` |
-| `QualteroMgrApi.csproj` | `CmsCrewProviderMgr1` |
-| `CrewEmployeeLookupApi.csproj` | `CrewEmployeeLookupAPI` |
-| `CrewProfileApi.csproj` | `CrewEmployeeLookupAPI` |
-| `CrewPositionQualificationStatus.csproj` | `CrewEmployeeLookupAPI` |
-| `CmsPlannedActivityToCrewAvailability.csproj` | `CrewEmployeeLookupAPI` |
-| `CmsCrewHcmToPersonSyncFunction.csproj` | `CrewEmployeeLookupAPI` |
-| `TransactionTableWatchSync.csproj` | `CrewEmployeeLookupAPI` |
-| `CmsCrewSchedulerMgr.csproj` | `CmsCrewScheduler` |
-| `cmscrewscheduler.csproj` | `CmsCrewScheduler` |
-| `CmsCrewUserQualsToCrewQuals.Infrastructure.csproj` | `cmscrewtraining` |
-| `CmsCrewStatusAssignmentSyncFunction.csproj` | `cmscrewtraining` |
-| `CmsCrewPersonToUsersSyncFunction.csproj` | `cmscrewtraining` |
-| `CmsCrewFlightLogBook.csproj` | `cmscrewtraining` |
-| `CmsCrewAvailabilityToBasicEvent.Function.csproj` | `cmscrewtraining` |
-| `CmsCrewCertificate.csproj` | `cmscrewtraining` |
+| `AppCarryOverRosters.csproj` | `AppProviderScheduling` |
+| `QualMgrDBApi.csproj` | `AppProviderMgr` |
+| `QualMgrApi.csproj` | `AppProviderMgr` |
+| `AppEmployeeLookupApi.csproj` | `AppLookupAPI` |
+| `CrewProfileApi.csproj` | `AppLookupAPI` |
+| `CrewPositionQualificationStatus.csproj` | `AppLookupAPI` |
+| `AppPlannedActivitySync.csproj` | `AppLookupAPI` |
+| `AppHcmSyncFunction.csproj` | `AppLookupAPI` |
+| `TransactionTableWatchSync.csproj` | `AppLookupAPI` |
+| `AppSchedulerMgr.csproj` | `AppScheduler` |
+| `cmscrewscheduler.csproj` | `AppScheduler` |
+| `AppUserQualsSync.Infrastructure.csproj` | `apptraining` |
+| `AppStatusSyncFunction.csproj` | `apptraining` |
+| `AppPersonSyncFunction.csproj` | `apptraining` |
+| `AppLogBook.csproj` | `apptraining` |
+| `AppAvailabilitySync.Function.csproj` | `apptraining` |
+| `AppCertificate.csproj` | `apptraining` |
 | `Cmsgraphapi.csproj` | `CmsGraphApi` |
 | `Pilot.PlannedAbsence.WebService.csproj` | `PlannedAbsence.WebService` |
 
@@ -265,20 +265,20 @@ For each conflicted file:
 
 ```xml
 <!-- Before -->
-<PackageReference Include="AlaskaAir.CmsCrew.CrewEmployeeDB.Models" Version="0.32.0" />
+<PackageReference Include="MyCompany.MyApp.AppEmployeeDB.Models" Version="0.32.0" />
 
 <!-- After — use the exact prerelease version from Step 4d -->
-<PackageReference Include="AlaskaAir.CmsCrew.CrewEmployeeDB.Models" Version="0.24.6-alpha.20260415181200" />
+<PackageReference Include="MyCompany.MyApp.AppEmployeeDB.Models" Version="0.24.6-alpha.20260415181200" />
 ```
 
 > ⚠️ **Include the full prerelease suffix** (e.g., `-alpha.20260415181200`). The feature branch pipeline publishes prerelease packages. Omitting the suffix will fail to resolve the package.
 
-Ensure `nuget.config` in the repo includes the **ASInternal** feed and has `includePrerelease` support:
+Ensure `nuget.config` in the repo includes the **InternalFeed** feed and has `includePrerelease` support:
 
 ```xml
 <configuration>
   <packageSources>
-    <add key="ASInternal" value="https://pkgs.dev.azure.com/itsals/Crew/_packaging/ASInternal/nuget/v3/index.json" />
+    <add key="InternalFeed" value="https://pkgs.dev.azure.com/myorg/MyProject/_packaging/InternalFeed/nuget/v3/index.json" />
   </packageSources>
 </configuration>
 ```
@@ -304,7 +304,7 @@ Common errors and fixes:
 | `CS0117: does not contain definition for 'OldColumn'` | Removed column still referenced | Remove all usages |
 | Object initializer missing required property | Non-nullable column added | Add `NewColumn = <default>` to all `new Entity { }` blocks |
 | `CS1061: 'Entity' does not contain 'NavProp'` | Relation dropped | Remove `.Include(x => x.NavProp)` |
-| `NU1102: Unable to find package` | Package not yet published / feed not configured | Verify pipeline succeeded and nuget.config has ASInternal |
+| `NU1102: Unable to find package` | Package not yet published / feed not configured | Verify pipeline succeeded and nuget.config has InternalFeed |
 
 > If you hit an error not listed here, **ask the user** before making changes to fix it.
 
@@ -326,7 +326,7 @@ $viewEntity = "<ViewEntityName>"
 
 Get-ChildItem -Recurse -Filter "*.cs" -Path "C:\JCTE" |
     Select-String $viewEntity -SimpleMatch |
-    Where-Object { $_.Path -notmatch "CrewEmployeeLookupDB" } |
+    Where-Object { $_.Path -notmatch "AppModelsDB" } |
     Select-Object Path, LineNumber, Line
 ```
 
@@ -351,7 +351,7 @@ Get-ChildItem -Recurse -Filter "*.cs" |
 
 ```bash
 git add .
-git commit -m "chore: update AlaskaAir.CmsCrew.CrewEmployeeDB.Models to <new-version> for <entity> schema change"
+git commit -m "chore: update MyCompany.MyApp.AppEmployeeDB.Models to <new-version> for <entity> schema change"
 git push origin feature/update-ef-models-<entity>-<date>
 ```
 
@@ -384,7 +384,6 @@ dotnet test --no-build
 | ScaffoldDb.ps1 errors | `references/scaffold-troubleshooting.md` |
 | Test update patterns | `references/testing-patterns.md` |
 | EF Core scaffold flags | `microsoft_docs_fetch(url="https://learn.microsoft.com/ef/core/cli/dotnet#dotnet-ef-dbcontext-scaffold")` |
-| Azure Artifacts NuGet feed | [ASInternal feed](https://itsals.visualstudio.com/Crew/_artifacts/feed/ASInternal) |
+| Azure Artifacts NuGet feed | [InternalFeed feed](https://myorg.visualstudio.com/MyProject/_artifacts/feed/InternalFeed) |
 | az pipelines run | `microsoft_docs_search(query="az pipelines run azure devops CLI branch")` |
-| ADO pipeline | [Definition 15098](https://itsals.visualstudio.com/Crew/_build?definitionId=15098) |
-
+| ADO pipeline | [Definition 15098](https://myorg.visualstudio.com/MyProject/_build?definitionId=12345) |
