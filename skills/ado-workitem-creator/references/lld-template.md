@@ -41,12 +41,12 @@ Example component flow:
 | APIM baseroute | Configure API Management base route |
 
 ### Source(s)
-- **Qualtero** — new tables/columns being consumed
+- **SourceDb** — new tables/columns being consumed
 - **Service Bus** — queue/topic names
 - **HTTP** — endpoint URLs, trigger routes
 
 ### Target
-- **JCTE (Model)** — target data model / DB tables
+- **AppDomain (Model)** — target data model / DB tables
 - Output queue, downstream API, etc.
 
 ### Integration Method
