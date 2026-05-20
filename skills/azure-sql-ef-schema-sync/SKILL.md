@@ -237,7 +237,7 @@ Note the full version string (e.g., `0.24.6-alpha.20260415181200`) — you'll us
 **Do not update all consumers.** Only update repos where code actually references the changed entity or column.
 
 ```powershell
-# Replace with the entity name that changed (e.g., carryoverroster, crew_availability)
+# Replace with the entity name that changed (e.g., carryoverroster, teamname_availability)
 $changedEntity = "<entity-name>"
 
 # Scan all local repos for references
@@ -255,13 +255,13 @@ From the results, identify which `.csproj` files (repos) are impacted. Cross-ref
 | `QualMgrDBApi.csproj` | `AppProviderMgr` |
 | `QualMgrApi.csproj` | `AppProviderMgr` |
 | `AppEmployeeLookupApi.csproj` | `AppLookupAPI` |
-| `CrewProfileApi.csproj` | `AppLookupAPI` |
-| `CrewPositionQualificationStatus.csproj` | `AppLookupAPI` |
+| `TeamNameProfileApi.csproj` | `AppLookupAPI` |
+| `TeamNamePositionQualificationStatus.csproj` | `AppLookupAPI` |
 | `AppPlannedActivitySync.csproj` | `AppLookupAPI` |
 | `AppHcmSyncFunction.csproj` | `AppLookupAPI` |
 | `TransactionTableWatchSync.csproj` | `AppLookupAPI` |
 | `AppSchedulerMgr.csproj` | `AppScheduler` |
-| `cmscrewscheduler.csproj` | `AppScheduler` |
+| `cmsteamnamescheduler.csproj` | `AppScheduler` |
 | `AppUserQualsSync.Infrastructure.csproj` | `apptraining` |
 | `AppStatusSyncFunction.csproj` | `apptraining` |
 | `AppPersonSyncFunction.csproj` | `apptraining` |
@@ -366,10 +366,10 @@ See [references/testing-patterns.md](references/testing-patterns.md) for full pa
 **View entity updated (column added to underlying SQL view):** The scaffolded view entity automatically includes the new property. Find any explicit projection mappings that need updating:
 
 ```powershell
-# Replace ViewEntityName with the actual class name (e.g., VCrewAvailability)
+# Replace ViewEntityName with the actual class name (e.g., VTeamNameAvailability)
 $viewEntity = "<ViewEntityName>"
 
-Get-ChildItem -Recurse -Filter "*.cs" -Path "C:\JCTE" |
+Get-ChildItem -Recurse -Filter "*.cs" -Path "C:\AppDomain" |
     Select-String $viewEntity -SimpleMatch |
     Where-Object { $_.Path -notmatch "AppModelsDB" } |
     Select-Object Path, LineNumber, Line

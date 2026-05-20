@@ -59,7 +59,7 @@ Read the user's description or LLD text. Extract:
 - **Assignee** — use strict precedence: (1) explicit "assign to X" instruction, (2) "assign to me/myself" → `{{config.default_assignee}}`, (3) no instruction → default `{{config.default_assignee}}`. **Do not infer** assignee from names appearing in the LLD body (reviewers, PO names, stakeholders, Q&A participants). If ambiguous, ask.
 - **In-Scope work** — what is explicitly being built.
 - **Out-of-Scope** — anything explicitly excluded, or leave blank.
-- **Source/Target systems** — identify data sources (Qualtero, Service Bus, SQL, HTTP) and targets (JCTE, queues, tables).
+- **Source/Target systems** — identify data sources (SourceDb, Service Bus, SQL, HTTP) and targets (AppDomain, queues, tables).
 - **Integration methods** — Azure Function triggers, API endpoints, DB change tracking, etc.
 
 ### Step 2 — Estimate Story Points (Fibonacci)
@@ -81,7 +81,7 @@ Use this rubric — calibrated for Azure Function / integration work:
 
 Also consider: +1 Fibonacci level if schema/contract changes are involved; +1 level if backfill/data migration is required; +1 level if cross-team coordination is explicitly needed.
 
-Briefly state your reasoning (e.g., "New Azure Function + Service Bus trigger + JCTE DB write + error handling = 8 pts").
+Briefly state your reasoning (e.g., "New Azure Function + Service Bus trigger + AppDomain DB write + error handling = 8 pts").
 
 ### Step 3 — Format the Description and Acceptance Criteria
 
@@ -107,10 +107,10 @@ Build two separate HTML blobs — one for **Description** and one for **Acceptan
 </ul>
 
 <h3>Source(s)</h3>
-<p>[Qualtero tables, Service Bus queue/topic, HTTP endpoint, etc.]</p>
+<p>[SourceDb tables, Service Bus queue/topic, HTTP endpoint, etc.]</p>
 
 <h3>Target</h3>
-<p>[JCTE model/DB table, output queue, downstream API, etc.]</p>
+<p>[AppDomain model/DB table, output queue, downstream API, etc.]</p>
 
 <h3>Integration Method</h3>
 <p>[Azure Function trigger type, APIM baseroute, etc.]</p>
@@ -201,7 +201,7 @@ If the command fails, show the exact error and suggest the most likely fix.
 
 ## Edge Cases
 
-- **No title given**: Derive a title from the core noun + verb in the description (e.g., "Build API for crew position sync").
+- **No title given**: Derive a title from the core noun + verb in the description (e.g., "Build API for teamname position sync").
 - **Multiple developers mentioned**: Use only explicitly assigned developers. Do not infer from context — if unclear, ask.
 - **Very vague input** (< 20 words): Ask one focused clarifying question before proceeding. Don't guess on scope.
 - **Epic-level input** (estimate would be 21 pts or input clearly describes multiple independent deliverables): Stop. Decompose into sub-stories and show numbered list. Ask which to create. Do not compress into one large story.

@@ -4,8 +4,8 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "Create a user story for a new Azure Function that listens on a Service Bus queue called 'crew-position-updates', reads the incoming XML payload, transforms it to the JCTE position model, and writes it to the CrewPositions SQL table in JCTE. The function should have retry logic and handle poison messages. Assign it to me.",
-      "expected_output": "A User Story created in ADO under MyProject\\MyTeam_Area, MyProject Backlog iteration, assigned to user@mycompany.com, with 5 or 8 story points, and an LLD-template-formatted HTML description covering the Service Bus source, JCTE target, transformation logic, and retry/error handling NFRs.",
+      "prompt": "Create a user story for a new Azure Function that listens on a Service Bus queue called 'teamname-position-updates', reads the incoming XML payload, transforms it to the AppDomain position model, and writes it to the TeamNamePositions SQL table in AppDomain. The function should have retry logic and handle poison messages. Assign it to me.",
+      "expected_output": "A User Story created in ADO under MyProject\\MyTeam_Area, MyProject Backlog iteration, assigned to user@mycompany.com, with 5 or 8 story points, and an LLD-template-formatted HTML description covering the Service Bus source, AppDomain target, transformation logic, and retry/error handling NFRs.",
       "files": [],
       "assertions": [
         "The skill shows a preview before creating the work item",
@@ -13,30 +13,30 @@
         "Story points are in the Fibonacci sequence (1,2,3,5,8,13,21)",
         "The az boards work-item create command includes --area 'MyProject\\MyTeam_Area'",
         "The az boards work-item create command includes --iteration 'MyProject\\MyProject Backlog'",
-        "The description HTML includes a Source(s) section mentioning Service Bus or crew-position-updates",
-        "The description HTML includes a Target section mentioning JCTE or CrewPositions",
+        "The description HTML includes a Source(s) section mentioning Service Bus or teamname-position-updates",
+        "The description HTML includes a Target section mentioning AppDomain or TeamNamePositions",
         "The work item is assigned to user@mycompany.com",
         "After creation, the output shows the work item ID and a direct URL to view it"
       ]
     },
     {
       "id": 2,
-      "prompt": "I need a story for building an HTTP trigger API endpoint that exposes crew scheduling data from Qualtero. The APIM base route should be /api/v1/crew/schedule. It reads from Qualtero's ScheduleAssignment and EmployeeShift tables and returns JSON to the caller. This is a pretty straightforward read-only endpoint. Assign to developer Sarah.Jones@mycompany.com.",
-      "expected_output": "A User Story with story points of 3 or 5 (simple read API), assigned to Sarah.Jones@mycompany.com, description includes Source section with Qualtero tables (ScheduleAssignment, EmployeeShift), Integration Method section with HTTP Trigger, APIM baseroute /api/v1/crew/schedule, and Target section showing JSON output.",
+      "prompt": "I need a story for building an HTTP trigger API endpoint that exposes teamname scheduling data from SourceDb. The APIM base route should be /api/v1/teamname/schedule. It reads from SourceDb's ScheduleAssignment and EmployeeShift tables and returns JSON to the caller. This is a pretty straightforward read-only endpoint. Assign to developer Sarah.Jones@mycompany.com.",
+      "expected_output": "A User Story with story points of 3 or 5 (simple read API), assigned to Sarah.Jones@mycompany.com, description includes Source section with SourceDb tables (ScheduleAssignment, EmployeeShift), Integration Method section with HTTP Trigger, APIM baseroute /api/v1/teamname/schedule, and Target section showing JSON output.",
       "files": [],
       "assertions": [
         "The skill shows a preview before creating the work item",
         "Story points are 3 or 5 (not higher — this is a simple read API)",
         "Assigned to Sarah.Jones@mycompany.com (not the default user)",
-        "The description includes the APIM base route /api/v1/crew/schedule",
-        "The description includes the Qualtero source tables: ScheduleAssignment and EmployeeShift",
+        "The description includes the APIM base route /api/v1/teamname/schedule",
+        "The description includes the SourceDb source tables: ScheduleAssignment and EmployeeShift",
         "The az boards work-item create command is syntactically correct with all required flags",
         "After creation, the output shows the work item ID and URL"
       ]
     },
     {
       "id": 3,
-      "prompt": "Create a work item: 'Build complete crew management platform with real-time position tracking, schedule optimization AI, integration with 12 external HR systems, custom reporting dashboards, mobile app, and automated compliance engine'",
+      "prompt": "Create a work item: 'Build complete teamname management platform with real-time position tracking, schedule optimization AI, integration with 12 external HR systems, custom reporting dashboards, mobile app, and automated compliance engine'",
       "expected_output": "The skill recognizes this as an epic (21 story points), shows a preview with 21 pts, warns the user that this should be broken into smaller stories, and either asks for confirmation or suggests splitting before creating.",
       "files": [],
       "assertions": [
